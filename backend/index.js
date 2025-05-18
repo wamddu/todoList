@@ -3,6 +3,8 @@ const cors  = require('cors');
 const app = express();
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const SECRET_KEY = 'supersecretkey123';
 
 mongoose.connect('mongodb+srv://yhy6923:tjddms090@first.6afe4ag.mongodb.net/?retryWrites=true&w=majority&appName=first',{
 }).then(()=>{
@@ -30,11 +32,30 @@ const Post = mongoose.model('Post', postSchema);
 app.use(cors());
 app.use(express.json());
 
-app.post('/api/posts', async(req, res)=>{
+app.post('/api/lgin', async (req,res)=>{
+    const {username, password} = req.body;
+
+    try{
+        const user = await User.findOne({username});
+        if(!user) return res.status(401).send('존재하지 않는 사용자입니다.');
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if(!isMatch) return res.status(401).send('비밀번호가 틀렸습니다!');
+
+        const token = jwt.sign({ userId: user._id}, SECRET_KEY, {expiresIn: '1h'});
+
+        res.json({message : '로그인 성공', token});
+    }catch(err){
+        console.error(err);
+        res.status(500).send('로그인 실패');
+    }
+});
+
+app.post('/api/posts',authMiddleware, async(req, res)=>{
     const {title, content, author} = req.body;
     
     try{
-        const newPost = await Post.create({ title, content, author});
+        const newPost = await Post.create({ title, content, author : req.userId});
         res.json(newPost);
     }catch(err){
         console.log(err);
@@ -97,6 +118,25 @@ app.get('/api/posts', async(req,res)=>{
 app.get('/api/test', (req, res)=>{
     res.json({ message: '백엔드 연결 성공!'});
 });
+
+function authMiddleware(req, res, next) {
+    const authHeader = req.headers.authorization;
+
+    if(!authHeader){
+        return res.status(401).send('토큰 없음');
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    try{
+        const decoded = jwt.verify(token, SECRET_KEY);
+        req.userId = decoded.userId;
+        next();
+    } catch(err){
+        console.error(err);
+        res.status(401).send('유효하지 않은 토큰');
+    }
+}
 
 app.listen(5000,()=>{
     console.log('서버 실행 중http://localhost:5000');

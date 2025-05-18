@@ -8,6 +8,8 @@ function App(){
   const [editId, setEditId] = useState(null);
   const [editText, setEditText] = useState('');
   const [filter, setFilter] = useState('all');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleAdd = async() =>{
     if(text.trim()==='') return;
@@ -21,11 +23,13 @@ function App(){
 
     await fetch('http://localhost:5000/api/posts', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization' : `Bearer ${localStorage.getItem('token')}`
+     },
     body: JSON.stringify({
       title: text,
       content: text,
-      author: '호영',
     }),
   });
   };
@@ -96,6 +100,46 @@ function App(){
     else return true;
   });
 
+  const handleRegister = async() =>{
+    try{
+      const res = await fetch('http://localhost:5000/api/register',{
+        method : 'POST',
+        headers : { 'Content-Type' : 'application/json'},
+        body: JSON.stringify({username, password})
+      });
+
+      const text = await res.text();
+      alert(text);
+    }catch(err){
+      console.log(err);
+      alert('회원가입 실패!');
+    }
+  };
+
+  const handleLogin = async() =>{
+    try{
+      const res = await fetch('http://localhost:5000/api/logiin',{
+        method : 'POST',
+        headers : {'Content-Type' : 'application/json'},
+        body : JSON.stringify({username, password})
+      });
+
+      const data = await res.json();
+      if(res.ok){
+        localStorage.setItem('token', data.token);
+        alert('로그인 성공!');
+      }else{
+        alert(data.message || '로그인 실패!');
+      }
+    }catch(err){
+      console.log(err);
+      alert('로그인 실패!');
+    }
+  };
+
+  const token = localStorage.getItem('token');
+
+
   useEffect(()=>{
     fetch('http://localhost:5000/api/posts')
     .then((res)=> res.json())
@@ -133,6 +177,7 @@ function App(){
         <button onClick={() => setFilter('done')}>완료</button>
       </div>
 
+
       <ul>
         {filteredTodos.map((todo)=>(
           <TodoItem
@@ -151,6 +196,29 @@ function App(){
           />
         ))}
       </ul>
+
+
+      <div>
+        <h2>회원가입 / 로그인</h2>
+        <input
+          placeholder = "아이디"
+          value = {username}
+          onChange = {(e)=> setUsername(e.target.value)}
+        />
+
+        <input
+          placeholder = "비밀번호"
+          value = {password}
+          onChange = {(e) => setPassword(e.target.value)}
+        />
+        <button onClick={handleRegister}>회원가입</button>
+        <button onClick={handleLogin}>로그인</button>
+      </div>
+
+
+      <div>
+        {token ? <p>로그인 상태</p> : <p>로그인 필요</p>}
+      </div>
     </div>
   );
 }
