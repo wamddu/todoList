@@ -2,7 +2,7 @@ const express = require('express');
 const cors  = require('cors');
 const app = express();
 const mongoose = require('mongoose');
-
+const bcrypt = require('bcrypt');
 
 mongoose.connect('mongodb+srv://yhy6923:tjddms090@first.6afe4ag.mongodb.net/?retryWrites=true&w=majority&appName=first',{
 }).then(()=>{
@@ -18,6 +18,13 @@ const postSchema = new mongoose.Schema({
     author : String,
 });
 
+const userSchema = new mongoose.Schema({
+    username : { type : String, required : true, unique : true},
+    password: { type : String, required: true},
+});
+
+const User = mongoose.model('User', userSchema);
+
 const Post = mongoose.model('Post', postSchema);
 
 app.use(cors());
@@ -32,6 +39,24 @@ app.post('/api/posts', async(req, res)=>{
     }catch(err){
         console.log(err);
         res.status(500).send('글 저장 실패!');
+    }
+});
+
+app.post('/api/register', async(req, res) => {
+    const {username, password} = req.body;
+
+    try{
+        const existingUser = await User.findOne({username});
+        if(existingUser) return res.status(400).send('이미 존재하는 사용자명입니다');
+
+        const hashed = await bcrypt.hash(password,10);
+
+        const newUser = await User.create({username, password: hashed});
+
+        res.status(201).send('회원가입 완료!');
+    }catch(err){
+        console.error(err);
+        res.status(500).send('회원가입 실패!');
     }
 });
 
