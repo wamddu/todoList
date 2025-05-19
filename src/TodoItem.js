@@ -1,6 +1,6 @@
 function TodoItem({id, text, isDone, onDelete, onToggle, isEditing, editText, onEditStart, onEditTextChange, onEditSubmit, onEditCancel}){
     return(
-        <li>
+        <li className={isDone ? 'done' : ''}>
             <input 
                 type = "checkbox"
                 checked={isDone}
@@ -23,9 +23,7 @@ function TodoItem({id, text, isDone, onDelete, onToggle, isEditing, editText, on
                 </>
             ) : (
                 <>
-            <span style = {{ textDecoration: isDone ? 'line-through' : 'none'}}>
-                {text}
-            </span>
+            <span>{text}</span>
             <button onClick={()=> onEditStart(id, text)}>수정</button>
             </>
         )}

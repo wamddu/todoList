@@ -1,6 +1,7 @@
 import { useState} from 'react';
 import TodoItem from './TodoItem';
 import { useEffect } from 'react';
+import './App.css';
 
 function App(){
   const [todos, setTodos] = useState([]);
@@ -162,7 +163,6 @@ function App(){
     alert('로그아웃 되었습니다!');
   };
 
-  const token = localStorage.getItem('token');
 
 
   useEffect(()=>{
@@ -190,68 +190,63 @@ function App(){
   }, [isLoggedIn]);
 
   return (
-    <div>
-      <h1>Todo 리스트</h1>
+    <div className="container">
+    <h1>Todo 리스트</h1>
 
+    <div className="input-group">
       <input
-        value = {text}
+        value={text}
         onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e)=>{
-          if(e.key==='Enter'){
-            handleAdd();
-          }else if(e.key=== 'Escape'){
-            handleCancel();
-          }
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') handleAdd();
+          else if (e.key === 'Escape') handleCancel();
         }}
-        placeholder='할 일을 입력하세요'
+        placeholder="할 일을 입력하세요"
       />
       <button onClick={handleAdd}>추가</button>
+    </div>
 
-      <div>
-        <button onClick={() => setFilter('all')}>전체</button>
-        <button onClick={() => setFilter('undone')}>미완료</button>
-        <button onClick={() => setFilter('done')}>완료</button>
-      </div>
+    <div className="filter-buttons">
+      <button onClick={() => setFilter('all')}>전체</button>
+      <button onClick={() => setFilter('undone')}>미완료</button>
+      <button onClick={() => setFilter('done')}>완료</button>
+    </div>
 
+    <ul>
+      {filteredTodos.map((todo) => (
+        <TodoItem
+          key={todo.id}
+          id={todo.id}
+          text={todo.text}
+          isDone={todo.isDone}
+          onDelete={handleDelete}
+          onToggle={handleToggle}
+          isEditing={editId === todo.id}
+          editText={editText}
+          onEditStart={handleEditStart}
+          onEditTextChange={setEditText}
+          onEditSubmit={handleEditSubmit}
+          onEditCancel={handleEditCancel}
+        />
+      ))}
+    </ul>
 
+    <div className="auth-section">
       {isLoggedIn ? (
         <>
-        
-          <ul>
-            {filteredTodos.map((todo)=>(
-              <TodoItem
-                key = {todo.id}
-                id = {todo.id}
-                text = {todo.text}
-                isDone = {todo.isDone}
-                onDelete={handleDelete}
-                onToggle = {handleToggle}
-                isEditing={editId === todo.id}
-                editText = {editText}
-                onEditStart = {handleEditStart}
-                onEditTextChange={setEditText}
-                onEditSubmit={handleEditSubmit}
-                onEditCancel = {handleEditCancel}
-              />
-            ))}
-          </ul>
-          <p>로그인 되있음</p>
+          <p>로그인 중</p>
           <button onClick={handleLogout}>로그아웃</button>
         </>
       ) : (
         <>
-          <input value = {username} onChange={(e)=> setUsername(e.target.value)} placeholder='아이디' />
-          <input value = {password} onChange={(e) => setPassword(e.target.value)} placeholder = '비밀번호' type = "password" />
+          <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="아이디" />
+          <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="비밀번호" type="password" />
           <button onClick={handleRegister}>회원가입</button>
           <button onClick={handleLogin}>로그인</button>
         </>
       )}
-
-
-      <div>
-        {token ? <p>로그인 중</p> : <p>로그인 필요</p>}
-      </div>
     </div>
+  </div>
   );
 }
 

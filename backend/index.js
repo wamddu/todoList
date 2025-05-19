@@ -110,7 +110,6 @@ app.put('/api/posts/:id', async (req, res)=>{
 app.get('/api/posts',authMiddleware, async(req,res)=>{
     try{
         const posts = await Post.find({author : req.userId});
-        console.log(req.userId);    
         res.json(posts);
     }catch(err){
         console.log(err);
