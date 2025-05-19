@@ -10,28 +10,39 @@ function App(){
   const [filter, setFilter] = useState('all');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
 
   const handleAdd = async() =>{
     if(text.trim()==='') return;
-    const newTodo = {
-      id : Date.now(),
-      text,
-      isDone : false,
-    };
-    setTodos([...todos, newTodo]);
-    setText('');
+    
+    try{
+      const res = await fetch('http://localhost:5000/api/posts',{
+        method : 'POST',
+        headers: {
+          'Content-Type' : 'application/json',
+          'Authorization' : `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          title : text,
+          content : text,
+        }),
+      });
 
-    await fetch('http://localhost:5000/api/posts', {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'Authorization' : `Bearer ${localStorage.getItem('token')}`
-     },
-    body: JSON.stringify({
-      title: text,
-      content: text,
-    }),
-  });
+      const created = await res.json();
+
+      console.log('응답:',created);
+
+      const newTodo = {
+        id : created._id,
+        text : created.title,
+        isDone : false
+      };
+
+      setTodos((prev) => [...todos, newTodo]);
+      setText('');
+    }catch(err){
+      console.error('추가 실패: ',err);
+    }
   };
 
   const handleEditStart = (id, currentText) =>{
@@ -70,14 +81,20 @@ function App(){
   };
   
   const handleDelete = async (id) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
-    
+
     try{
       const res = await fetch(`http://localhost:5000/api/posts/${id}`,{
         method: 'DELETE',
+        headers: {
+          'Authorization' : `Bearer ${localStorage.getItem('token')}`
+        },
       });
+      
+      const msg = await res.text();
 
-      if(!res.ok) throw new Error('삭제 실패');
+      if(!res.ok) throw new Error(msg); 
+
+      setTodos((prev) => prev.filter((todo) => todo.id !== id));
     }catch(err){
       console.error(err);
     }
@@ -118,7 +135,7 @@ function App(){
 
   const handleLogin = async() =>{
     try{
-      const res = await fetch('http://localhost:5000/api/logiin',{
+      const res = await fetch('http://localhost:5000/api/login',{
         method : 'POST',
         headers : {'Content-Type' : 'application/json'},
         body : JSON.stringify({username, password})
@@ -127,6 +144,7 @@ function App(){
       const data = await res.json();
       if(res.ok){
         localStorage.setItem('token', data.token);
+        setIsLoggedIn(true);
         alert('로그인 성공!');
       }else{
         alert(data.message || '로그인 실패!');
@@ -137,12 +155,30 @@ function App(){
     }
   };
 
+  const handleLogout = () =>{
+    localStorage.removeItem('token');
+    setIsLoggedIn(false);
+    setTodos([]);
+    alert('로그아웃 되었습니다!');
+  };
+
   const token = localStorage.getItem('token');
 
 
   useEffect(()=>{
-    fetch('http://localhost:5000/api/posts')
-    .then((res)=> res.json())
+    const token = localStorage.getItem('token');
+    if(token) setIsLoggedIn(true);
+    if(!token) return;
+
+    fetch('http://localhost:5000/api/posts',{
+      headers: {
+        'Authorization' : `Bearer ${token}`,
+      },
+    })
+    .then((res)=> {
+      if(!res.ok) return new Error('글 불러오기 실패!');
+      return res.json();
+    })
     .then((data)=>{
       const mapped = data.map((post)=>({
         id : post._id,
@@ -151,7 +187,7 @@ function App(){
       }));
       setTodos(mapped);
     })
-  }, []);
+  }, [isLoggedIn]);
 
   return (
     <div>
@@ -178,46 +214,42 @@ function App(){
       </div>
 
 
-      <ul>
-        {filteredTodos.map((todo)=>(
-          <TodoItem
-            key = {todo.id}
-            id = {todo.id}
-            text = {todo.text}
-            isDone = {todo.isDone}
-            onDelete={handleDelete}
-            onToggle = {handleToggle}
-            isEditing={editId === todo.id}
-            editText = {editText}
-            onEditStart = {handleEditStart}
-            onEditTextChange={setEditText}
-            onEditSubmit={handleEditSubmit}
-            onEditCancel = {handleEditCancel}
-          />
-        ))}
-      </ul>
+      {isLoggedIn ? (
+        <>
+        
+          <ul>
+            {filteredTodos.map((todo)=>(
+              <TodoItem
+                key = {todo.id}
+                id = {todo.id}
+                text = {todo.text}
+                isDone = {todo.isDone}
+                onDelete={handleDelete}
+                onToggle = {handleToggle}
+                isEditing={editId === todo.id}
+                editText = {editText}
+                onEditStart = {handleEditStart}
+                onEditTextChange={setEditText}
+                onEditSubmit={handleEditSubmit}
+                onEditCancel = {handleEditCancel}
+              />
+            ))}
+          </ul>
+          <p>로그인 되있음</p>
+          <button onClick={handleLogout}>로그아웃</button>
+        </>
+      ) : (
+        <>
+          <input value = {username} onChange={(e)=> setUsername(e.target.value)} placeholder='아이디' />
+          <input value = {password} onChange={(e) => setPassword(e.target.value)} placeholder = '비밀번호' type = "password" />
+          <button onClick={handleRegister}>회원가입</button>
+          <button onClick={handleLogin}>로그인</button>
+        </>
+      )}
 
 
       <div>
-        <h2>회원가입 / 로그인</h2>
-        <input
-          placeholder = "아이디"
-          value = {username}
-          onChange = {(e)=> setUsername(e.target.value)}
-        />
-
-        <input
-          placeholder = "비밀번호"
-          value = {password}
-          onChange = {(e) => setPassword(e.target.value)}
-        />
-        <button onClick={handleRegister}>회원가입</button>
-        <button onClick={handleLogin}>로그인</button>
-      </div>
-
-
-      <div>
-        {token ? <p>로그인 상태</p> : <p>로그인 필요</p>}
+        {token ? <p>로그인 중</p> : <p>로그인 필요</p>}
       </div>
     </div>
   );

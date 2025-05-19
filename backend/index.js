@@ -1,4 +1,4 @@
-const express = require('express');
+    const express = require('express');
 const cors  = require('cors');
 const app = express();
 const mongoose = require('mongoose');
@@ -32,7 +32,7 @@ const Post = mongoose.model('Post', postSchema);
 app.use(cors());
 app.use(express.json());
 
-app.post('/api/lgin', async (req,res)=>{
+app.post('/api/login', async (req,res)=>{
     const {username, password} = req.body;
 
     try{
@@ -42,7 +42,7 @@ app.post('/api/lgin', async (req,res)=>{
         const isMatch = await bcrypt.compare(password, user.password);
         if(!isMatch) return res.status(401).send('비밀번호가 틀렸습니다!');
 
-        const token = jwt.sign({ userId: user._id}, SECRET_KEY, {expiresIn: '1h'});
+        const token = jwt.sign({ userId: user._id}, 'supersecretkey123', {expiresIn: '1h'});
 
         res.json({message : '로그인 성공', token});
     }catch(err){
@@ -52,8 +52,7 @@ app.post('/api/lgin', async (req,res)=>{
 });
 
 app.post('/api/posts',authMiddleware, async(req, res)=>{
-    const {title, content, author} = req.body;
-    
+    const {title, content} = req.body;
     try{
         const newPost = await Post.create({ title, content, author : req.userId});
         res.json(newPost);
@@ -81,10 +80,13 @@ app.post('/api/register', async(req, res) => {
     }
 });
 
-app.delete('/api/posts/:id', async(req,res)=>{
+app.delete('/api/posts/:id',authMiddleware, async(req,res)=>{
     const {id} = req.params;
     try{
-        await Post.findByIdAndDelete(id);
+        const result  = await Post.deleteOne({_id : id, author : req.userId});
+        if(result.deletedCount === 0){
+            return res.status(403).send('삭제 권환이 없습니다.');
+        }
         res.send('삭제 완료');
     }catch(err) {
         console.log(err);
@@ -105,9 +107,10 @@ app.put('/api/posts/:id', async (req, res)=>{
     }
 });
 
-app.get('/api/posts', async(req,res)=>{
+app.get('/api/posts',authMiddleware, async(req,res)=>{
     try{
-        const posts = await Post.find().sort({_id : -1});
+        const posts = await Post.find({author : req.userId});
+        console.log(req.userId);    
         res.json(posts);
     }catch(err){
         console.log(err);
